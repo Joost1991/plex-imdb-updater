@@ -16,9 +16,7 @@ import sys
 import sqlite3
 from plexapi.server import PlexServer
 from imdbpie import Imdb
-from utils.db import set_locked_fields, reset_rating, set_rating_and_imdb_image
-from utils.omdb import get_imdb_rating_from_omdb, get_season_from_omdb
-from utils.tmdb import get_season_from_imdb, get_imdb_id_from_tmdb_by_tvdb, get_imdb_id_from_tmdb
+from utils import omdb, db, tmdb
 
 
 # EDIT SETTINGS ###
@@ -74,7 +72,7 @@ def main(plex_id=None):
 
     imdb = Imdb()
     conn_db = sqlite3.connect(PLEX_DATABASE_FILE)
-    db = conn_db.cursor()
+    database = conn_db.cursor()
 
     success = 0
     failed = 0
@@ -94,25 +92,25 @@ def main(plex_id=None):
                 imdb_id = plex_object.guid.split('imdb://')[1].split('?')[0]
             elif 'themoviedb://' in plex_object.guid:
                 tmdb_id = plex_object.guid.split('themoviedb://')[1].split('?')[0]
-                imdb_id = get_imdb_id_from_tmdb(tmdb_id, is_movie_library)
+                imdb_id = tmdb.get_imdb_id_from_tmdb(tmdb_id, is_movie_library)
             elif 'thetvdb://' in plex_object.guid:
                 tvdb_id = plex_object.guid.split('thetvdb://')[1].split('?')[0]
-                imdb_id = get_imdb_id_from_tmdb_by_tvdb(tvdb_id)
+                imdb_id = tmdb.get_imdb_id_from_tmdb_by_tvdb(tvdb_id)
 
             else:
                 imdb_id = None
 
             if not imdb_id:
                 print("Missing IMDB ID. Skipping media object '{pm.title}'.".format(pm=plex_object))
-                reset_rating(db, plex_object)
-                set_locked_fields(db, plex_object)
+                db.reset_rating(database, plex_object)
+                db.set_locked_fields(database, plex_object)
                 failed = failed + 1
                 continue
 
             print("Getting ratings for imdb id '{imdb_id}'".format(imdb_id=imdb_id))
             rating = None
             if OMDB_API_KEY:
-                imdb_movie = get_imdb_rating_from_omdb(imdb_id)
+                imdb_movie = omdb.get_imdb_rating_from_omdb(imdb_id)
                 if imdb_movie is not None:
                     print("{im}\t{pm.title}\tOMDB".format(pm=plex_object, im=imdb_movie["imdb_rating"]))
                     rating = imdb_movie["imdb_rating"]
@@ -127,44 +125,45 @@ def main(plex_id=None):
                                 print("Getting episodes for {p.title} for season {season}".format(p=plex_object,
                                                                                                   season=season.index))
                                 if EPISODE_RATINGS_SOURCE is "imdb":
-                                    imdb_episodes = get_season_from_imdb(imdb, imdb_id, season.index)
+                                    imdb_episodes = tmdb.get_season_from_imdb(imdb, imdb_id, season.index)
                                     print(imdb_episodes)
                                     for episode in season.episodes():
                                         if episode.index in imdb_episodes:
                                             if imdb_episodes[episode.index] == 'N/A':
-                                                reset_rating(db, episode)
-                                                set_locked_fields(db, episode)
+                                                db.reset_rating(database, episode)
+                                                db.set_locked_fields(database, episode)
                                                 failed = failed + 1
                                             else:
-                                                set_rating_and_imdb_image(db, episode, imdb_episodes[episode.index])
-                                                set_locked_fields(db, episode)
+                                                db.set_rating_and_imdb_image(database, episode,
+                                                                             imdb_episodes[episode.index])
+                                                db.set_locked_fields(database, episode)
                                                 success = success + 1
                                                 print("Update episode '{e.title}' '{e.index}' with new ratings".format(
                                                     e=episode))
                                         else:
-                                            reset_rating(db, episode)
-                                            set_locked_fields(db, episode)
+                                            db.reset_rating(database, episode)
+                                            db.set_locked_fields(database, episode)
                                             failed = failed + 1
                                             print("Episode '{e.title}' '{e.index}' not in OMDB. Cannot update".format(
                                                 e=episode))
                                 elif EPISODE_RATINGS_SOURCE is "omdb":
-                                    episodes_metadata = get_season_from_omdb(imdb_id, season.index)
+                                    episodes_metadata = omdb.get_season_from_omdb(imdb_id, season.index)
                                     for episode in season.episodes():
                                         if str(episode.index) in episodes_metadata:
                                             if episodes_metadata[str(episode.index)] == 'N/A':
-                                                reset_rating(db, episode)
-                                                set_locked_fields(db, episode)
+                                                db.reset_rating(database, episode)
+                                                db.set_locked_fields(database, episode)
                                                 failed = failed + 1
                                             else:
-                                                set_rating_and_imdb_image(db, episode,
-                                                                          episodes_metadata[str(episode.index)])
-                                                set_locked_fields(db, episode)
+                                                db.set_rating_and_imdb_image(database, episode,
+                                                                             episodes_metadata[str(episode.index)])
+                                                db.set_locked_fields(database, episode)
                                                 success = success + 1
                                                 print("Update episode '{e.title}' '{e.index}' with new ratings".format(
                                                     e=episode))
                                         else:
-                                            reset_rating(db, episode)
-                                            set_locked_fields(db, episode)
+                                            db.reset_rating(database, episode)
+                                            db.set_locked_fields(database, episode)
                                             failed = failed + 1
                                             print("Episode '{e.title}' '{e.index}' not in OMDB. Cannot update".format(
                                                 e=episode))
@@ -177,18 +176,18 @@ def main(plex_id=None):
             if rating is None:
                 print("Media not found on IMDB. Skipping '{pm.title} ({imdb_id})'.".format(pm=plex_object,
                                                                                            imdb_id=imdb_id))
-                reset_rating(db, plex_object)
-                set_locked_fields(db, plex_object)
+                db.reset_rating(database, plex_object)
+                db.set_locked_fields(database, plex_object)
                 failed = failed + 1
                 continue
 
             if not DRY_RUN:
-                set_rating_and_imdb_image(db, plex_object, rating)
-                set_locked_fields(db, plex_object)
+                db.set_rating_and_imdb_image(database, plex_object, rating)
+                db.set_locked_fields(database, plex_object)
                 success = success + 1
 
     conn_db.commit()
-    db.close()
+    database.close()
 
 
 if __name__ == "__main__":
