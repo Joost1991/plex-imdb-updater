@@ -32,15 +32,6 @@ EPISODE_RATINGS = True  # Whether to fetch episode ratings
 EPISODE_RATINGS_SOURCE = "imdb"  # How to fetch the episode ratings. Via OMDB or directly from IMDB
 DRY_RUN = False  # Dry run without modifying the database (True or False)
 
-# API Keys
-# Optional: The Movie Database details ###
-# To enable fetching TVDB and TMDB items ###
-config.TMDB_API_KEY = ''
-# Optional: The Open Movie Database details ###
-# Enter your OMDIB API key.
-# Scraping IMDb can be very slow process. This speeds up the process by getting the IMDB rating directly from OMDB
-config.OMDB_API_KEY = ''
-
 
 def main(plex_id=None):
     # Connect to the Plex server
