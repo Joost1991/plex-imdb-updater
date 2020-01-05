@@ -1,9 +1,8 @@
 import json
+import update_imdb_ratings
 from datetime import time
 
 import requests
-
-from update_imdb_ratings import TMDB_API_KEY
 
 TMDB_REQUEST_COUNT = 0  # DO NOT CHANGE
 
@@ -19,7 +18,7 @@ with open("tvdb-imdb.txt") as overrides:
 def get_imdb_id_from_tmdb(tmdb_id, is_movie=True):
     global TMDB_REQUEST_COUNT
 
-    if not TMDB_API_KEY:
+    if not update_imdb_ratings.TMDB_API_KEY:
         return None
 
     # Wait 10 seconds for the TMDb rate limit
@@ -27,7 +26,7 @@ def get_imdb_id_from_tmdb(tmdb_id, is_movie=True):
         time.sleep(10)
         TMDB_REQUEST_COUNT = 0
 
-    params = {"api_key": TMDB_API_KEY}
+    params = {"api_key": update_imdb_ratings.TMDB_API_KEY}
     print("Fetching IMDB id from TMDB {tmdb_id}".format(tmdb_id=tmdb_id))
     if is_movie:
         url = "https://api.themoviedb.org/3/movie/{tmdb_id}".format(tmdb_id=tmdb_id)
@@ -52,7 +51,7 @@ def get_imdb_id_from_tmdb_by_tvdb(tvdb_id):
         print("Got an override for {tvdb_id}".format(tvdb_id=tvdb_id))
         return tvdb_overrides[tvdb_id].rstrip()
 
-    if not TMDB_API_KEY:
+    if not update_imdb_ratings.TMDB_API_KEY:
         return None
 
     # Wait 10 seconds for the TMDb rate limit
@@ -60,7 +59,7 @@ def get_imdb_id_from_tmdb_by_tvdb(tvdb_id):
         time.sleep(10)
         TMDB_REQUEST_COUNT = 0
 
-    params = {"api_key": TMDB_API_KEY}
+    params = {"api_key": update_imdb_ratings.TMDB_API_KEY}
 
     url = "https://api.themoviedb.org/3/find/{tvdb_id}?external_source=tvdb_id".format(tvdb_id=tvdb_id)
     print("Fetching from TMDB with tvdb {tvdb_id}".format(tvdb_id=tvdb_id))
