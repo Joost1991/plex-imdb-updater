@@ -1,8 +1,8 @@
 from datetime import time
 
-import config
 import omdb
-import update_imdb_ratings
+
+from utils import config
 
 OMDB_REQUEST_COUNT = 0  # DO NOT CHANGE
 

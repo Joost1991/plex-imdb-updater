@@ -16,9 +16,7 @@ import sys
 import sqlite3
 from plexapi.server import PlexServer
 from imdbpie import Imdb
-from utils import omdb, db, tmdb
-import config
-
+from utils import omdb, db, tmdb, config
 
 # EDIT SETTINGS ###
 # Plex settings

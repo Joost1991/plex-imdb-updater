@@ -1,7 +1,7 @@
 import json
 import update_imdb_ratings
 from datetime import time
-import config
+from utils import config
 
 import requests
 
