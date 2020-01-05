@@ -3,9 +3,17 @@ from datetime import time
 
 import requests
 
-from update_imdb_ratings import TMDB_API_KEY, tvdb_overrides
+from update_imdb_ratings import TMDB_API_KEY
 
-TMDB_REQUEST_COUNT = 0  # DO NOT CHANGEß
+TMDB_REQUEST_COUNT = 0  # DO NOT CHANGE
+
+
+# Setup overrides, manually specify a imdb id for tvdb ids
+tvdb_overrides = {}
+with open("tvdb-imdb.txt") as overrides:
+    for line in overrides:
+        tvdb, imdb = line.partition("=")[::2]
+        tvdb_overrides[tvdb.strip()] = str(imdb)
 
 
 def get_imdb_id_from_tmdb(tmdb_id, is_movie=True):

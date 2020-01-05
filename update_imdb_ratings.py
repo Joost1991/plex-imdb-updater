@@ -40,13 +40,6 @@ TMDB_API_KEY = ''
 # Scraping IMDb can be very slow process. This speeds up the process by getting the IMDB rating directly from OMDB
 OMDB_API_KEY = ''
 
-# Setup overrides, manually specify a imdb id for tvdb ids
-tvdb_overrides = {}
-with open("tvdb-imdb.txt") as overrides:
-    for line in overrides:
-        tvdb, imdb = line.partition("=")[::2]
-        tvdb_overrides[tvdb.strip()] = str(imdb)
-
 
 def main(plex_id=None):
     # Connect to the Plex server
