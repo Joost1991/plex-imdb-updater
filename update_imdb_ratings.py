@@ -64,7 +64,7 @@ def main(plex_id=None):
         print("Processing " + library.title)
         for plex_object in library.all():
             # check if movie or show library
-            if plex_object.type is "movie":
+            if plex_object.TYPE is "movie":
                 is_movie_library = True
             else:
                 is_movie_library = False
