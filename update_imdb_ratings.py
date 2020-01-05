@@ -42,6 +42,9 @@ OMDB_API_KEY = ''
 
 
 def main(plex_id=None):
+    global TMDB_API_KEY
+    global OMDB_API_KEY
+
     # Connect to the Plex server
     print("Connecting to the Plex server at '{base_url}'...".format(base_url=PLEX_URL))
     try:

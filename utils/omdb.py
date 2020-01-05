@@ -28,7 +28,7 @@ def get_imdb_rating_from_omdb(imdb_id):
     except:
         print("Error getting rating from OMDB. Trying again in few seconds")
         time.sleep(10)
-        OMDB_REQUEST_COßUNT = 0
+        OMDB_REQUEST_COUNT = 0
         return get_imdb_rating_from_omdb(imdb_id)
 
     OMDB_REQUEST_COUNT += 1
