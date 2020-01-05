@@ -160,12 +160,12 @@ def main(plex_id=None):
                                             failed = failed + 1
                                             print("Episode '{e.title}' '{e.index}' not in OMDB. Cannot update".format(
                                                 e=episode))
-            if imdb_movie is None and imdb.title_exists(imdb_id):
-                imdb_movie = imdb.get_title_ratings(imdb_id)
-                print(imdb_movie)
-                if imdb_movie is not None and "rating" in imdb_movie:
-                    print("{im}\t{pm.title}".format(pm=plex_object, im=imdb_movie["rating"]))
-                    rating = imdb_movie["rating"]
+                if imdb_movie is None and imdb.title_exists(imdb_id):
+                    imdb_movie = imdb.get_title_ratings(imdb_id)
+                    print(imdb_movie)
+                    if imdb_movie is not None and "rating" in imdb_movie:
+                        print("{im}\t{pm.title}".format(pm=plex_object, im=imdb_movie["rating"]))
+                        rating = imdb_movie["rating"]
             if rating is None:
                 print("Media not found on IMDB. Skipping '{pm.title} ({imdb_id})'.".format(pm=plex_object,
                                                                                            imdb_id=imdb_id))
