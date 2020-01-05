@@ -168,8 +168,8 @@ def main(plex_id=None):
                 db.set_rating_and_imdb_image(database, plex_object, rating)
                 db.set_locked_fields(database, plex_object)
                 success = success + 1
-
-    conn_db.commit()
+        # commit the changes after each library
+        conn_db.commit()
     database.close()
 
 
