@@ -1,5 +1,4 @@
 import json
-import update_imdb_ratings
 from datetime import time
 from utils import config
 
@@ -27,7 +26,7 @@ def get_imdb_id_from_tmdb(tmdb_id, is_movie=True):
         time.sleep(10)
         TMDB_REQUEST_COUNT = 0
 
-    params = {"api_key": update_imdb_ratings.TMDB_API_KEY}
+    params = {"api_key": config.TMDB_API_KEY}
     print("Fetching IMDB id from TMDB {tmdb_id}".format(tmdb_id=tmdb_id))
     if is_movie:
         url = "https://api.themoviedb.org/3/movie/{tmdb_id}".format(tmdb_id=tmdb_id)
@@ -60,7 +59,7 @@ def get_imdb_id_from_tmdb_by_tvdb(tvdb_id):
         time.sleep(10)
         TMDB_REQUEST_COUNT = 0
 
-    params = {"api_key": update_imdb_ratings.TMDB_API_KEY}
+    params = {"api_key": config.TMDB_API_KEY}
 
     url = "https://api.themoviedb.org/3/find/{tvdb_id}?external_source=tvdb_id".format(tvdb_id=tvdb_id)
     print("Fetching from TMDB with tvdb {tvdb_id}".format(tvdb_id=tvdb_id))
