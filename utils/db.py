@@ -1,4 +1,4 @@
-import sqlite3
+import sqlite3, re
 
 
 def set_rating_and_imdb_image(db, plex_object, rating):
