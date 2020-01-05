@@ -1,5 +1,6 @@
 import json
-from datetime import time
+import time
+
 from utils import config
 
 import requests
