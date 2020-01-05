@@ -1,5 +1,6 @@
 from datetime import time
 
+import config
 import omdb
 import update_imdb_ratings
 
@@ -14,8 +15,10 @@ def get_imdb_rating_from_omdb(imdb_id):
     """
     global OMDB_REQUEST_COUNT
 
-    if not update_imdb_ratings.OMDB_API_KEY:
+    if not config.OMDB_API_KEY:
         return None
+    else:
+        omdb.set_default("apikey", config.OMDB_API_KEY)
 
     # Wait 10 seconds for the TMDb rate limit
     if OMDB_REQUEST_COUNT >= 30:
@@ -48,8 +51,10 @@ def get_season_from_omdb(imdb_id, season):
     """
     global OMDB_REQUEST_COUNT
 
-    if not update_imdb_ratings.OMDB_API_KEY:
+    if not config.OMDB_API_KEY:
         return None
+    else:
+        omdb.set_default("apikey", config.OMDB_API_KEY)
 
     # Wait 10 seconds for the TMDb rate limit
     if OMDB_REQUEST_COUNT >= 30:

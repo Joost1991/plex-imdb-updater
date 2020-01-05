@@ -17,6 +17,7 @@ import sqlite3
 from plexapi.server import PlexServer
 from imdbpie import Imdb
 from utils import omdb, db, tmdb
+import config
 
 
 # EDIT SETTINGS ###
@@ -34,17 +35,14 @@ DRY_RUN = False  # Dry run without modifying the database (True or False)
 # API Keys
 # Optional: The Movie Database details ###
 # To enable fetching TVDB and TMDB items ###
-TMDB_API_KEY = ''
+config.TMDB_API_KEY = ''
 # Optional: The Open Movie Database details ###
 # Enter your OMDIB API key.
 # Scraping IMDb can be very slow process. This speeds up the process by getting the IMDB rating directly from OMDB
-OMDB_API_KEY = ''
+config.OMDB_API_KEY = ''
 
 
 def main(plex_id=None):
-    global TMDB_API_KEY
-    global OMDB_API_KEY
-
     # Connect to the Plex server
     print("Connecting to the Plex server at '{base_url}'...".format(base_url=PLEX_URL))
     try:
@@ -105,7 +103,7 @@ def main(plex_id=None):
 
             print("Getting ratings for imdb id '{imdb_id}'".format(imdb_id=imdb_id))
             rating = None
-            if OMDB_API_KEY:
+            if config.OMDB_API_KEY:
                 imdb_movie = omdb.get_imdb_rating_from_omdb(imdb_id)
                 if imdb_movie is not None:
                     print("{im}\t{pm.title}\tOMDB".format(pm=plex_object, im=imdb_movie["imdb_rating"]))

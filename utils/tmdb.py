@@ -1,6 +1,7 @@
 import json
 import update_imdb_ratings
 from datetime import time
+import config
 
 import requests
 
@@ -18,7 +19,7 @@ with open("tvdb-imdb.txt") as overrides:
 def get_imdb_id_from_tmdb(tmdb_id, is_movie=True):
     global TMDB_REQUEST_COUNT
 
-    if not update_imdb_ratings.TMDB_API_KEY:
+    if not config.TMDB_API_KEY:
         return None
 
     # Wait 10 seconds for the TMDb rate limit
@@ -51,7 +52,7 @@ def get_imdb_id_from_tmdb_by_tvdb(tvdb_id):
         print("Got an override for {tvdb_id}".format(tvdb_id=tvdb_id))
         return tvdb_overrides[tvdb_id].rstrip()
 
-    if not update_imdb_ratings.TMDB_API_KEY:
+    if not config.TMDB_API_KEY:
         return None
 
     # Wait 10 seconds for the TMDb rate limit
