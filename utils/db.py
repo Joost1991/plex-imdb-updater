@@ -1,4 +1,18 @@
 import sqlite3, re
+from sqlite3 import Error
+
+
+def create_connection(db_file):
+    """ create a database connection to a SQLite database """
+    conn = None
+    try:
+        conn = sqlite3.connect(db_file)
+        print(sqlite3.version)
+    except Error as e:
+        print(e)
+    finally:
+        if conn:
+            conn.close()
 
 
 def set_rating_and_imdb_image(db, plex_object, rating):

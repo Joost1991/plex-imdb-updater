@@ -90,17 +90,3 @@ def get_imdb_id_from_tmdb_by_tvdb(tvdb_id):
     else:
         print("Did not find by tvdb")
         return None
-
-
-def get_season_from_imdb(imdb, imdb_id, season):
-    print("Getting episodes from IMDB...")
-    season = imdb.get_title_episodes_detailed(imdb_id, season=season)
-
-    # checking if there really is a rating and rating is not N/A
-    if season is not None and "episodes" in season:
-        episodes = {}
-        for episode in season["episodes"]:
-            episodes[episode["episodeNumber"]] = episode["rating"]
-        return episodes
-    else:
-        return None
