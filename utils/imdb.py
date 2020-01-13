@@ -3,7 +3,7 @@ import logging
 from imdbpie import Imdb
 
 imdb = None
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("plex-imdb-updater")
 
 
 def get_season_from_imdb(imdb_id, season):

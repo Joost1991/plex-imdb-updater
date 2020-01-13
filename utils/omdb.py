@@ -6,7 +6,7 @@ import omdb
 from utils import config
 
 OMDB_REQUEST_COUNT = 0  # DO NOT CHANGE
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("plex-imdb-updater")
 
 
 def get_imdb_rating_from_omdb(imdb_id):

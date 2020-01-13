@@ -3,7 +3,7 @@ import sqlite3, re
 from datetime import datetime
 from sqlite3 import Error
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("plex-imdb-updater")
 
 
 def create_connection(db_file):

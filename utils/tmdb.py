@@ -7,7 +7,7 @@ from utils import config
 import requests
 
 TMDB_REQUEST_COUNT = 0  # DO NOT CHANGE
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("plex-imdb-updater")
 
 # Setup overrides, manually specify a imdb id for tvdb ids
 tvdb_overrides = {}

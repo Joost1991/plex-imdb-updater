@@ -41,7 +41,7 @@ THRESHOLD_NORMAL = timedelta(days=-14)
 
 
 def main(plex_id=None, force=False):
-    logger = logging.getLogger(__name__)
+    logger = logging.getLogger("plex-imdb-updater")
     db.create_connection("db.sqlite")
     # Connect to the Plex server
     logger.info("Connecting to the Plex server at '{base_url}'...".format(base_url=PLEX_URL))
@@ -362,7 +362,7 @@ def should_update_media(type, plex_id):
 
 
 if __name__ == "__main__":
-    logger = logging.getLogger(__name__)
+    logger = logging.getLogger("plex-imdb-updater")
     logger.setLevel(DEBUG_LEVEL)
     logger.addHandler(logging.FileHandler("plex-imdb-updater.log"))
     create_tables()
