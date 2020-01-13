@@ -1,6 +1,9 @@
+import logging
+
 from imdbpie import Imdb
 
 imdb = None
+logger = logging.getLogger(__name__)
 
 
 def get_season_from_imdb(imdb_id, season):

@@ -71,9 +71,9 @@ def main(plex_id=None, force=False):
 
     for library in libraries:
         logger.info("Processing " + library.title)
-        pbar = tqdm(library.all(), postfix=["",""])
+        pbar = tqdm(library.all())
         for plex_object in pbar:
-            pbar.postfix[0] = plex_object.title
+            pbar.set_description("Processing " + library.title)
             # check if movie or show library
             if plex_object.TYPE is "movie":
                 is_movie_library = True
@@ -98,7 +98,6 @@ def main(plex_id=None, force=False):
                 continue
 
             logger.debug("Getting ratings for imdb id '{imdb_id}'".format(imdb_id=imdb_id))
-            pbar.postfix[1] = "Getting overall rating"
             rating = None
             if config.OMDB_API_KEY:
                 # Check if we need to update this
@@ -163,7 +162,6 @@ def main(plex_id=None, force=False):
                         db.set_locked_fields(database, plex_object)
                 # now try to fetch seasons
                 if not is_movie_library:
-                    pbar.postfix[1] = "Getting season episode ratings"
                     for season in plex_object.seasons():
                         # don't do anything with specials
                         if season.index is 0:
@@ -173,7 +171,6 @@ def main(plex_id=None, force=False):
                         if EPISODE_RATINGS:
                             logger.debug("Getting episodes for {p.title} for season {season}".format(
                                 p=plex_object,season=season.index))
-                            pbar.postfix[1] = "Getting season " + str(season.index) + " episode ratings"
                             imdb_episodes = None
                             for episode in season.episodes():
                                 success = update_episode_rating(database, episode, imdb_episodes, imdb_id,

@@ -7,7 +7,7 @@ from utils import config
 import requests
 
 TMDB_REQUEST_COUNT = 0  # DO NOT CHANGE
-
+logger = logging.getLogger(__name__)
 
 # Setup overrides, manually specify a imdb id for tvdb ids
 tvdb_overrides = {}
@@ -29,7 +29,7 @@ def get_imdb_id_from_tmdb(tmdb_id, is_movie=True):
         TMDB_REQUEST_COUNT = 0
 
     params = {"api_key": config.TMDB_API_KEY}
-    logging.debug("Fetching IMDB id from TMDB {tmdb_id}".format(tmdb_id=tmdb_id))
+    logger.debug("Fetching IMDB id from TMDB {tmdb_id}".format(tmdb_id=tmdb_id))
     if is_movie:
         url = "https://api.themoviedb.org/3/movie/{tmdb_id}".format(tmdb_id=tmdb_id)
     else:
@@ -50,7 +50,7 @@ def get_imdb_id_from_tmdb_by_tvdb(tvdb_id):
     global TMDB_REQUEST_COUNT
 
     if tvdb_id in tvdb_overrides:
-        logging.info("Got an override for {tvdb_id}".format(tvdb_id=tvdb_id))
+        logger.info("Got an override for {tvdb_id}".format(tvdb_id=tvdb_id))
         return tvdb_overrides[tvdb_id].rstrip()
 
     if not config.TMDB_API_KEY:
@@ -64,7 +64,7 @@ def get_imdb_id_from_tmdb_by_tvdb(tvdb_id):
     params = {"api_key": config.TMDB_API_KEY}
 
     url = "https://api.themoviedb.org/3/find/{tvdb_id}?external_source=tvdb_id".format(tvdb_id=tvdb_id)
-    logging.debug("Fetching from TMDB with tvdb {tvdb_id}".format(tvdb_id=tvdb_id))
+    logger.debug("Fetching from TMDB with tvdb {tvdb_id}".format(tvdb_id=tvdb_id))
     r = requests.get(url, params=params)
 
     TMDB_REQUEST_COUNT += 1
@@ -73,12 +73,12 @@ def get_imdb_id_from_tmdb_by_tvdb(tvdb_id):
 
         # check if we did find TV results from TMDB
         if len(media_object["tv_results"]) == 0:
-            logging.debug("Found no tv results based on tvdb id")
+            logger.debug("Found no tv results based on tvdb id")
             return None
 
         # if we have found a TMDB id, we know need to get the IMDB id
         url = "https://api.themoviedb.org/3/tv/{tv_id}/external_ids".format(tv_id=media_object["tv_results"][0]["id"])
-        logging.debug("Fetching external IMDB id from TMDB {tv_id}".format(tv_id=media_object["tv_results"][0]["id"]))
+        logger.debug("Fetching external IMDB id from TMDB {tv_id}".format(tv_id=media_object["tv_results"][0]["id"]))
         r = requests.get(url, params=params)
 
         if r.status_code == 200:
@@ -89,5 +89,5 @@ def get_imdb_id_from_tmdb_by_tvdb(tvdb_id):
                 return None
         return None
     else:
-        logging.debug("Did not find by tvdb")
+        logger.debug("Did not find by tvdb")
         return None

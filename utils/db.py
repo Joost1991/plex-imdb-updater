@@ -1,6 +1,9 @@
+import logging
 import sqlite3, re
 from datetime import datetime
 from sqlite3 import Error
+
+logger = logging.getLogger(__name__)
 
 
 def create_connection(db_file):
@@ -8,9 +11,8 @@ def create_connection(db_file):
     conn = None
     try:
         conn = sqlite3.connect(db_file)
-        print(sqlite3.version)
     except Error as e:
-        print(e)
+        logger.severe(e)
     finally:
         if conn:
             conn.close()
@@ -51,7 +53,7 @@ def set_locked_fields(db, plex_object):
     user_fields = db_execute(db, "SELECT user_fields FROM metadata_items WHERE id = ? AND user_fields NOT LIKE ?", [plex_object.ratingKey, '%lockedFields=%5%']).fetchone()
     # if set, we need to update the locked fields
     if user_fields is not None:
-        print("Locking rating field")
+        logger.debug("Locking rating field for {p.title}".format(p=plex_object))
         fields = user_fields[0].split(",")
 
         for field in fields:
@@ -92,8 +94,8 @@ def db_execute(db, query, args):
     try:
         return db.execute(query, args)
     except sqlite3.OperationalError as e:
-        print("Database Error: {}".format(e))
+        logger.severe("Database Error: {}".format(e))
     except sqlite3.DatabaseError as e:
-        print("Database Error: {}".format(e))
+        logger.severe("Database Error: {}".format(e))
 
     return None

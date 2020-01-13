@@ -1,3 +1,4 @@
+import logging
 import time
 
 import omdb
@@ -5,6 +6,7 @@ import omdb
 from utils import config
 
 OMDB_REQUEST_COUNT = 0  # DO NOT CHANGE
+logger = logging.getLogger(__name__)
 
 
 def get_imdb_rating_from_omdb(imdb_id):
@@ -28,7 +30,7 @@ def get_imdb_rating_from_omdb(imdb_id):
     try:
         media = omdb.imdbid(imdb_id, timeout=5)
     except:
-        print("Error getting rating from OMDB. Trying again in few seconds")
+        logger.debug("Error getting rating from OMDB. Trying again in few seconds")
         time.sleep(10)
         OMDB_REQUEST_COUNT = 0
         return get_imdb_rating_from_omdb(imdb_id)
@@ -64,7 +66,7 @@ def get_season_from_omdb(imdb_id, season):
     try:
         season = omdb.imdbid(imdb_id, season=season)
     except:
-        print("Error getting rating from OMDB. Trying again in few seconds")
+        logger.debug("Error getting rating from OMDB. Trying again in few seconds")
         time.sleep(10)
         OMDB_REQUEST_COUNT = 0
         return get_season_from_omdb(imdb_id, season)
