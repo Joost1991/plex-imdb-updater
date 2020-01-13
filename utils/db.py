@@ -1,4 +1,5 @@
 import sqlite3, re
+from datetime import datetime
 from sqlite3 import Error
 
 
@@ -63,6 +64,18 @@ def set_locked_fields(db, plex_object):
                 locked_fields = field + "|5"
                 db_execute(db, "UPDATE metadata_items SET user_fields = ? || user_fields WHERE id = ?",
                             [locked_fields, plex_object.ratingKey])
+
+
+def update_db_rating(db_media, rating):
+    """
+    Update rating in the database including setting last update timestamp
+    :param db_media: the BaseMediaModel
+    :param rating: the rating to set for this
+    :return:
+    """
+    db_media.rating = rating
+    db_media.last_update = datetime.now()
+    db_media.save()
 
 
 def reset_rating(db, plex_object):

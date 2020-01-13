@@ -36,7 +36,7 @@ def get_imdb_rating_from_omdb(imdb_id):
     OMDB_REQUEST_COUNT += 1
 
     # checking if there really is a rating and rating is not N/A
-    if media is not None and 'imdb_rating' in media and media["imdb_rating"] is not "N/A":
+    if media is not None and 'imdb_rating' in media and media["imdb_rating"] != str('N/A'):
         return media
     else:
         return None
