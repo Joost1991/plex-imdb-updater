@@ -15,6 +15,8 @@ import logging
 import sys
 import sqlite3
 from datetime import datetime, timedelta
+from time import sleep
+
 from plexapi.server import PlexServer
 from imdbpie import Imdb
 from models import create_tables, Movie, Show, Episode
@@ -182,6 +184,9 @@ def main(plex_id=None, force=False):
 
     # commit the changes after everything processed, or else it blocks database access
     if not DRY_RUN:
+        while len(plex.sessions()) is not 0:
+            logger.info("Plex Media Server in use... waiting 10 seconds before commiting changes")
+            sleep(10)
         conn_db.commit()
         database.close()
     logger.info("Finished updating. {success} updated and {failed} failed".format(success=success, failed=failed))
