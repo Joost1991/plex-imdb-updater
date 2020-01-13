@@ -105,7 +105,6 @@ def main(plex_id=None, force=False):
                 # Check if we need to update this
                 if force or should_update_media(plex_object.TYPE, plex_object.ratingKey):
                     # first trying to get it from OMDB
-                    pbar.postfix[1] = "Getting overall rating from OMDB"
                     imdb_object = omdb.get_imdb_rating_from_omdb(imdb_id)
                     if imdb_object is not None:
                         logger.debug("{im}\t{pm.title}\tOMDB".format(pm=plex_object, im=imdb_object["imdb_rating"]))
@@ -113,7 +112,6 @@ def main(plex_id=None, force=False):
 
                     # if no rating yet, try to get it directly from IMDB
                     if (imdb_object is None or rating is None) and imdb.title_exists(imdb_id):
-                        pbar.postfix[1] = "Getting overall rating from IMDB"
                         imdb_object = imdb.get_title_ratings(imdb_id)
                         if imdb_object is not None and "rating" in imdb_object:
                             logger.debug("{im}\t{pm.title}\tIMDB".format(pm=plex_object, im=imdb_object["rating"]))
