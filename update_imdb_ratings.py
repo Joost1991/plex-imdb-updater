@@ -64,6 +64,7 @@ def main(plex_id=None, force=False):
 
     if not DRY_RUN:
         conn_db = sqlite3.connect(PLEX_DATABASE_FILE)
+        conn_db.isolation_level = None
         database = conn_db.cursor()
     else:
         database = None

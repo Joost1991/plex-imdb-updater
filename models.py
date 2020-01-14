@@ -16,7 +16,7 @@ database = SqliteDatabase(DATABASE)
 class BaseModel(Model):
     plex_id = IntegerField(primary_key=True, unique=True)
     title = CharField()
-    imdb_id = CharField(unique=True, null=True)
+    imdb_id = CharField(null=True)
     tmdb_id = IntegerField(null=True)
     rating = DoubleField(null=True)
     last_update = DateTimeField(default=datetime.datetime.now)
