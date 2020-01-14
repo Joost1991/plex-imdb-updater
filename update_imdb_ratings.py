@@ -180,13 +180,12 @@ def main(plex_id=None, force=False):
                                     success = success + 1
                                 else:
                                     failed = failed + 1
-
-    # commit the changes after everything processed, or else it blocks database access
+            if not DRY_RUN:
+                while len(plex.sessions()) is not 0:
+                    logger.info("Plex Media Server in use... waiting 10 seconds before commiting changes")
+                    sleep(10)
+                conn_db.commit()
     if not DRY_RUN:
-        while len(plex.sessions()) is not 0:
-            logger.info("Plex Media Server in use... waiting 10 seconds before commiting changes")
-            sleep(10)
-        conn_db.commit()
         database.close()
     logger.info("Finished updating. {success} updated and {failed} failed".format(success=success, failed=failed))
 
