@@ -79,7 +79,7 @@ def main(plex_id=None, force=False):
             # check if movie or show library
             if plex_object.TYPE is "movie":
                 is_movie_library = True
-                if not should_update_media(plex_object.TYPE, plex_object.ratingKey):
+                if not should_update_media(plex_object.TYPE, plex_object):
                     continue
             else:
                 is_movie_library = False
@@ -103,7 +103,7 @@ def main(plex_id=None, force=False):
             rating = None
             if config.OMDB_API_KEY:
                 # Check if we need to update this
-                if force or should_update_media(plex_object.TYPE, plex_object.ratingKey):
+                if force or should_update_media(plex_object.TYPE, plex_object):
                     # first trying to get it from OMDB
                     imdb_object = omdb.get_imdb_rating_from_omdb(imdb_id)
                     if imdb_object is not None:
@@ -326,35 +326,46 @@ def resolve_ids(is_movie, guid):
     return imdb_id, tmdb_id, tvdb_id
 
 
-def should_update_media(type, plex_id):
+def should_update_media(type, plex_object):
     """
     Whether given plex media object rating should be updated
     :param type: the type of media
-    :param plex_id: the plex id
+    :param plex_object: the plex object containing rating and ratingKey
     :return: True if should be updated, False if not
     """
     if type is "movie":
-        db_movie = Movie.select().where(Movie.plex_id == plex_id)
+        db_movie = Movie.select().where(Movie.plex_id == plex_object.ratingKey)
         if db_movie.exists():
             if db_movie.get().last_update > datetime.now() - timedelta(days=-7):
+                return True
+            # if exists in local DB but not in Plex DB, it's not properly updated or updated from the outside
+            elif db_movie.get().rating is not plex_object.rating:
                 return True
         else:
             return True
     elif type is "show":
-        db_show = Show.select().where(Show.plex_id == plex_id)
+        db_show = Show.select().where(Show.plex_id == plex_object.ratingKey)
         if db_show.exists():
             if is_short_treshold(db_show.get().release_date):
                 if db_show.get().last_update > datetime.now() - THRESHOLD_SHORT:
                     return True
+                # if exists in local DB but not in Plex DB, it's not properly updated or updated from the outside
+                elif db_show.get().rating is not plex_object.rating:
+                    return True
             else:
                 if db_show.get().last_update > datetime.now() - THRESHOLD_NORMAL:
+                    return True
+                # if exists in local DB but not in Plex DB, it's not properly updated or updated from the outside
+                elif db_show.get().rating is not plex_object.rating:
                     return True
         else:
             return True
     elif type is "episode":
-        db_episode = Episode.select().where(Episode.plex_id == plex_id)
+        db_episode = Episode.select().where(Episode.plex_id == plex_object.ratingKey)
         if db_episode.exists():
             if db_episode.get().last_update > datetime.now() - timedelta(days=-7):
+                return True
+            elif db_episode.get().rating is not plex_object.rating:
                 return True
         else:
             return True
