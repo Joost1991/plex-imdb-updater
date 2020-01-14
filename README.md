@@ -1,4 +1,7 @@
 # Plex IMDB rating updater
+
+![Image of Plex IMDB Updater](https://github.com/Joost1991/plex-imdb-updater/blob/master/screenshots/overall.jpg?raw=true)
+
 ## Overview
 This script updates movies and tv shows with recent IMDB ratings. It fetches the ratings 
 either directly via IMDBPie or it's fetches it via OMDB. It directly edits the values in the
