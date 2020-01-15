@@ -17,7 +17,7 @@ with open("tvdb-imdb.txt") as overrides:
         tvdb_overrides[tvdb.strip()] = str(imdb)
 
 
-def get_imdb_id_from_tmdb(tmdb_id, is_movie=True):
+def get_imdb_id_from_tmdb(tmdb_id, is_movie=True, pbar=None):
     global TMDB_REQUEST_COUNT
 
     if not config.TMDB_API_KEY:
@@ -25,6 +25,10 @@ def get_imdb_id_from_tmdb(tmdb_id, is_movie=True):
 
     # Wait 10 seconds for the TMDb rate limit
     if TMDB_REQUEST_COUNT >= 30:
+        if pbar is None:
+            logger.info("Waiting for 10 seconds to not hit TMDb rate limit")
+        else:
+            pbar.postfix[1] = "Waiting 10 seconds TMDb rate limit"
         time.sleep(10)
         TMDB_REQUEST_COUNT = 0
 
@@ -46,11 +50,11 @@ def get_imdb_id_from_tmdb(tmdb_id, is_movie=True):
         return None
 
 
-def get_imdb_id_from_tmdb_by_tvdb(tvdb_id):
+def get_imdb_id_from_tmdb_by_tvdb(tvdb_id, pbar=None):
     global TMDB_REQUEST_COUNT
 
     if tvdb_id in tvdb_overrides:
-        logger.info("Got an override for {tvdb_id}".format(tvdb_id=tvdb_id))
+        logger.debug("Got an override for {tvdb_id}".format(tvdb_id=tvdb_id))
         return tvdb_overrides[tvdb_id].rstrip()
 
     if not config.TMDB_API_KEY:
@@ -58,6 +62,10 @@ def get_imdb_id_from_tmdb_by_tvdb(tvdb_id):
 
     # Wait 10 seconds for the TMDb rate limit
     if TMDB_REQUEST_COUNT >= 30:
+        if pbar is None:
+            logger.info("Waiting for 10 seconds to not hit TMDb rate limit")
+        else:
+            pbar.postfix[1] = "Waiting 10 seconds TMDb rate limit"
         time.sleep(10)
         TMDB_REQUEST_COUNT = 0
 

@@ -2,6 +2,7 @@ import logging
 import sqlite3, re
 from datetime import datetime
 from sqlite3 import Error
+from time import sleep
 
 logger = logging.getLogger("plex-imdb-updater")
 
@@ -12,7 +13,7 @@ def create_connection(db_file):
     try:
         conn = sqlite3.connect(db_file)
     except Error as e:
-        logger.severe(e)
+        logger.error(e)
     finally:
         if conn:
             conn.close()
@@ -94,8 +95,12 @@ def db_execute(db, query, args):
     try:
         return db.execute(query, args)
     except sqlite3.OperationalError as e:
-        logger.severe("Database Error: {}".format(e))
+        logger.error("Database Error: {}".format(e))
+        sleep(10)
+        db_execute(db, query, args)
     except sqlite3.DatabaseError as e:
-        logger.severe("Database Error: {}".format(e))
+        logger.error("Database Error: {}".format(e))
+        sleep(10)
+        db_execute(db, query, args)
 
     return None

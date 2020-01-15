@@ -19,10 +19,11 @@ from time import sleep
 
 from plexapi.server import PlexServer
 from imdbpie import Imdb
+from tqdm import tqdm
+
 from models import create_tables, Movie, Show, Episode
 from utils import omdb, db, tmdb, config, imdb
 from utils.util import is_short_treshold
-from tqdm import tqdm
 
 # EDIT SETTINGS ###
 # Plex settings
@@ -48,7 +49,7 @@ def main(plex_id=None, force=False):
     try:
         plex = PlexServer(PLEX_URL, PLEX_TOKEN)
     except:
-        logger.severe("No Plex server found at: {base_url}".format(base_url=PLEX_URL))
+        logger.error("No Plex server found at: {base_url}".format(base_url=PLEX_URL))
         return
 
     libraries = []
@@ -73,10 +74,11 @@ def main(plex_id=None, force=False):
     failed = 0
 
     for library in libraries:
-        logger.info("Processing " + library.title)
-        pbar = tqdm(library.all())
+        pbar = tqdm(library.all(), postfix=["", ""])
+        pbar.set_description("Processing " + library.title)
         for plex_object in pbar:
-            pbar.set_description("Processing " + library.title)
+            pbar.postfix[0] = plex_object.title
+            pbar.postfix[1] = "Processing"
             # check if movie or show library
             if plex_object.TYPE is "movie":
                 is_movie_library = True
@@ -89,7 +91,7 @@ def main(plex_id=None, force=False):
                 continue
 
             # resolve plex object to right identifiers
-            imdb_id, tmdb_id, tvdb_id = resolve_ids(is_movie_library, plex_object.guid)
+            imdb_id, tmdb_id, tvdb_id = resolve_ids(is_movie_library, plex_object.guid, pbar)
 
             # if no imdb_id is found for plex guid, reset all ratings
             if not imdb_id:
@@ -106,7 +108,7 @@ def main(plex_id=None, force=False):
                 # Check if we need to update this
                 if force or should_update_media(plex_object.TYPE, plex_object):
                     # first trying to get it from OMDB
-                    imdb_object = omdb.get_imdb_rating_from_omdb(imdb_id)
+                    imdb_object = omdb.get_imdb_rating_from_omdb(imdb_id, pbar)
                     if imdb_object is not None:
                         logger.debug("{im}\t{pm.title}\tOMDB".format(pm=plex_object, im=imdb_object["imdb_rating"]))
                         rating = imdb_object["imdb_rating"]
@@ -174,9 +176,9 @@ def main(plex_id=None, force=False):
                                 p=plex_object,season=season.index))
                             imdb_episodes = None
                             for episode in season.episodes():
-                                success = update_episode_rating(database, episode, imdb_episodes, imdb_id,
-                                                                plex_object, season)
-                                if success:
+                                update_success = update_episode_rating(database, episode, imdb_episodes, imdb_id,
+                                                                       plex_object, season)
+                                if update_success:
                                     success = success + 1
                                 else:
                                     failed = failed + 1
@@ -304,7 +306,7 @@ def update_imdb_episode_rating(database, episode, imdb_episodes, plex_object, se
     return False
 
 
-def resolve_ids(is_movie, guid):
+def resolve_ids(is_movie, guid, pbar=None):
     """
     Method to resolve ID from a Plex GUID
     :param is_movie_library: whether given GUID is a movie
@@ -317,10 +319,10 @@ def resolve_ids(is_movie, guid):
         imdb_id = guid.split('imdb://')[1].split('?')[0]
     elif 'themoviedb://' in guid:
         tmdb_id = guid.split('themoviedb://')[1].split('?')[0]
-        imdb_id = tmdb.get_imdb_id_from_tmdb(tmdb_id, is_movie)
+        imdb_id = tmdb.get_imdb_id_from_tmdb(tmdb_id, is_movie, pbar)
     elif 'thetvdb://' in guid:
         tvdb_id = guid.split('thetvdb://')[1].split('?')[0]
-        imdb_id = tmdb.get_imdb_id_from_tmdb_by_tvdb(tvdb_id)
+        imdb_id = tmdb.get_imdb_id_from_tmdb_by_tvdb(tvdb_id, pbar)
     else:
         imdb_id = None
     return imdb_id, tmdb_id, tvdb_id
@@ -376,6 +378,7 @@ if __name__ == "__main__":
     logger = logging.getLogger("plex-imdb-updater")
     logger.setLevel(DEBUG_LEVEL)
     logger.addHandler(logging.FileHandler("plex-imdb-updater.log"))
+    logger.addHandler(logging.StreamHandler(sys.stdout))
     create_tables()
     # you can run the script for one movie/show when giving the plex id
     if len(sys.argv) > 1:

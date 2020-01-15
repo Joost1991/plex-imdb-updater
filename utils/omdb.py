@@ -9,7 +9,7 @@ OMDB_REQUEST_COUNT = 0  # DO NOT CHANGE
 logger = logging.getLogger("plex-imdb-updater")
 
 
-def get_imdb_rating_from_omdb(imdb_id):
+def get_imdb_rating_from_omdb(imdb_id, pbar):
     """
     Getting IMDB rating for imdb_id from OMDB
     :param imdb_id: the imdb_id of the rating
@@ -24,6 +24,7 @@ def get_imdb_rating_from_omdb(imdb_id):
 
     # Wait 10 seconds for the TMDb rate limit
     if OMDB_REQUEST_COUNT >= 30:
+        pbar.postfix[1] = "Waiting 10 seconds OMDb rate limit"
         time.sleep(10)
         OMDB_REQUEST_COUNT = 0
 
@@ -44,7 +45,7 @@ def get_imdb_rating_from_omdb(imdb_id):
         return None
 
 
-def get_season_from_omdb(imdb_id, season):
+def get_season_from_omdb(imdb_id, season, pbar):
     """
     Getting specific season for IMDB id, including the ratings for each episode
     :param imdb_id: the IMDB item for which the items should be fetched
@@ -60,6 +61,7 @@ def get_season_from_omdb(imdb_id, season):
 
     # Wait 10 seconds for the TMDb rate limit
     if OMDB_REQUEST_COUNT >= 30:
+        pbar.postfix[1] = "Waiting 10 seconds OMDb rate limit"
         time.sleep(10)
         OMDB_REQUEST_COUNT = 0
 
