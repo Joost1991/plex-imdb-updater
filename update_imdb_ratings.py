@@ -92,7 +92,7 @@ def main(plex_id=None, force=False):
                     continue
 
             # resolve plex object to right identifiers
-            imdb_id, tmdb_id, tvdb_id = resolve_ids(is_movie_library, plex_object, pbar)
+            imdb_id, tmdb_id, tvdb_id = resolve_ids(is_movie_library, plex_object, force, pbar)
 
             # if no imdb_id is found for plex guid, reset all ratings
             if not imdb_id:
@@ -302,25 +302,26 @@ def update_imdb_episode_rating(database, episode, imdb_episodes, plex_object, se
     return False
 
 
-def resolve_ids(is_movie, plex_object, pbar=None):
+def resolve_ids(is_movie, plex_object, force, pbar=None):
     """
     Method to resolve ID from a Plex GUID
     :param is_movie_library: whether given GUID is a movie
     :param plex_object: the plex object containing the GUID
+    :param force: if forced update we want to resolve it again
     :param pbar: the progress bar object
     :return:
     """
     tmdb_id = None
     tvdb_id = None
     # first try to resolve via Plex ID if fetched earlier
-    if plex_object.TYPE is "movie":
+    if plex_object.TYPE is "movie" and not force:
         db_movie = Movie.select().where(Movie.plex_id == plex_object.ratingKey)
         if db_movie.exists():
             imdb_id = db_movie.get().imdb_id
             tmdb_id = db_movie.get().tmdb_id
             logger.debug("Resolved via existing db entry")
             return imdb_id, tmdb_id, tvdb_id
-    else:
+    elif not force:
         db_show = Show.select().where(Show.plex_id == plex_object.ratingKey)
         if db_show.exists():
             imdb_id = db_show.get().imdb_id
