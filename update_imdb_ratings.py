@@ -22,8 +22,7 @@ from imdbpie import Imdb
 from tqdm import tqdm
 
 from models import create_tables, Movie, Show, Episode
-from utils import omdb, db, tmdb, config, imdb
-from utils.util import is_short_treshold
+from utils import omdb, db, tmdb, config, imdb, util
 
 # EDIT SETTINGS ###
 # Plex settings
@@ -329,49 +328,25 @@ def should_update_media(type, plex_object):
     :return: True if should be updated, False if not
     """
     if type is "movie":
-        db_movie = Movie.select().where(Movie.plex_id == plex_object.ratingKey)
-        if db_movie.exists():
-            if db_movie.get().last_update > datetime.now() - timedelta(days=-7):
-                return True
-            # if exists in local DB but not in Plex DB, it's not properly updated or updated from the outside
-            elif db_movie.get().rating is not plex_object.rating:
-                return True
-        else:
-            return True
+        db_media_object = Movie.select().where(Movie.plex_id == plex_object.ratingKey)
+        return util.check_media_needs_update(db_media_object, plex_object)
     elif type is "show":
         # getting show and episodes from show
         db_show = Show.select().where(Show.plex_id == plex_object.ratingKey)
         db_episodes = Episode.select().where(Episode.parent_plex_id == plex_object.ratingKey)
         if db_show.exists():
-            # check if show needs update
-            if is_short_treshold(db_show.get().release_date):
-                if db_show.get().last_update > datetime.now() - THRESHOLD_SHORT:
-                    return True
-                # if exists in local DB but not in Plex DB, it's not properly updated or updated from the outside
-                elif db_show.get().rating != plex_object.rating:
-                    return True
+            if util.check_media_needs_update(db_show, plex_object):
+                return True
             # if show doesn't need update, maybe a single episode need one
             for episode in db_episodes:
-                if is_short_treshold(episode.get().release_date):
-                    if episode.get().last_update > datetime.now() - THRESHOLD_SHORT:
-                        return True
-                    # if exists in local DB but not in Plex DB, it's not properly updated or updated from the outside
-                    elif episode.get().rating != plex_object.rating:
-                        return True
-            else:
-                if db_show.get().last_update > datetime.now() - THRESHOLD_NORMAL:
-                    return True
-                # if exists in local DB but not in Plex DB, it's not properly updated or updated from the outside
-                elif db_show.get().rating != plex_object.rating:
+                if util.check_media_needs_update(episode, plex_object, check_rating=False):
                     return True
         else:
             return True
     elif type is "episode":
         db_episode = Episode.select().where(Episode.plex_id == plex_object.ratingKey)
         if db_episode.exists():
-            if db_episode.get().last_update > datetime.now() - timedelta(days=-7):
-                return True
-            elif db_episode.get().rating is not plex_object.rating:
+            if util.check_media_needs_update(db_episode, plex_object):
                 return True
         else:
             return True
