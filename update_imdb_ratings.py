@@ -78,6 +78,9 @@ def main(plex_id=None, force=False):
         for plex_object in pbar:
             pbar.postfix[0] = plex_object.title
             pbar.postfix[1] = "Processing"
+            # first do a check if we specified a plex id
+            if plex_id is not None and str(plex_object.ratingKey) != plex_id:
+                continue
             # check if movie or show library
             if plex_object.TYPE is "movie":
                 is_movie_library = True
@@ -87,9 +90,6 @@ def main(plex_id=None, force=False):
                 is_movie_library = False
                 if not should_update_media(plex_object.TYPE, plex_object):
                     continue
-            # first do a check if we specified a plex id
-            if plex_id is not None and plex_object.key not in "/library/metadata/" + plex_id:
-                continue
 
             # resolve plex object to right identifiers
             imdb_id, tmdb_id, tvdb_id = resolve_ids(is_movie_library, plex_object.guid, pbar)
@@ -293,7 +293,11 @@ def update_imdb_episode_rating(database, episode, imdb_episodes, plex_object, se
                 release_date=episode.originallyAvailableAt
             )
         else:
-            db.update_db_rating(db_episode.get(), imdb_episodes[episode.index]["rating"])
+            if episode.index in imdb_episodes:
+                db.update_db_rating(db_episode.get(), imdb_episodes[episode.index]["rating"])
+            else:
+                logger.debug("Episode '{e.title}' '{e.index}' not found. Cannot update".format(
+                    e=episode))
         return False
     return False
 
@@ -303,6 +307,7 @@ def resolve_ids(is_movie, guid, pbar=None):
     Method to resolve ID from a Plex GUID
     :param is_movie_library: whether given GUID is a movie
     :param plex_object: the plex object containing the GUID
+    :param pbar: the progress bar object
     :return:
     """
     tmdb_id = None
