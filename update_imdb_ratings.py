@@ -37,8 +37,8 @@ EPISODE_RATINGS = True  # Whether to fetch episode ratings
 EPISODE_RATINGS_SOURCE = "imdb"  # How to fetch the episode ratings. Via OMDB or directly from IMDB
 DRY_RUN = True  # Dry run without modifying the database (True or False)
 DEBUG_LEVEL = logging.INFO
-THRESHOLD_SHORT = timedelta(days=-1)
-THRESHOLD_NORMAL = timedelta(days=-14)
+THRESHOLD_SHORT = timedelta(days=1)
+THRESHOLD_NORMAL = timedelta(days=14)
 
 
 def main(plex_id=None, force=False):
