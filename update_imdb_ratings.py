@@ -333,8 +333,12 @@ def should_update_media(type, plex_object):
     :return: True if should be updated, False if not
     """
     if type is "movie":
-        db_media_object = Movie.select().where(Movie.plex_id == plex_object.ratingKey)
-        return util.check_media_needs_update(db_media_object, plex_object)
+        db_movie = Movie.select().where(Movie.plex_id == plex_object.ratingKey)
+        if db_movie.exists():
+            if util.check_media_needs_update(db_movie, plex_object):
+                return True
+        else:
+            return True
     elif type is "show":
         # getting show and episodes from show
         db_show = Show.select().where(Show.plex_id == plex_object.ratingKey)
