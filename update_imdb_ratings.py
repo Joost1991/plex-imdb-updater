@@ -86,6 +86,8 @@ def main(plex_id=None, force=False):
                     continue
             else:
                 is_movie_library = False
+                if not should_update_media(plex_object.TYPE, plex_object):
+                    continue
             # first do a check if we specified a plex id
             if plex_id is not None and plex_object.key not in "/library/metadata/" + plex_id:
                 continue
@@ -337,19 +339,30 @@ def should_update_media(type, plex_object):
         else:
             return True
     elif type is "show":
+        # getting show and episodes from show
         db_show = Show.select().where(Show.plex_id == plex_object.ratingKey)
+        db_episodes = Episode.select().where(Episode.parent_plex_id == plex_object.ratingKey)
         if db_show.exists():
+            # check if show needs update
             if is_short_treshold(db_show.get().release_date):
                 if db_show.get().last_update > datetime.now() - THRESHOLD_SHORT:
                     return True
                 # if exists in local DB but not in Plex DB, it's not properly updated or updated from the outside
-                elif db_show.get().rating is not plex_object.rating:
+                elif db_show.get().rating != plex_object.rating:
                     return True
+            # if show doesn't need update, maybe a single episode need one
+            for episode in db_episodes:
+                if is_short_treshold(episode.get().release_date):
+                    if episode.get().last_update > datetime.now() - THRESHOLD_SHORT:
+                        return True
+                    # if exists in local DB but not in Plex DB, it's not properly updated or updated from the outside
+                    elif episode.get().rating != plex_object.rating:
+                        return True
             else:
                 if db_show.get().last_update > datetime.now() - THRESHOLD_NORMAL:
                     return True
                 # if exists in local DB but not in Plex DB, it's not properly updated or updated from the outside
-                elif db_show.get().rating is not plex_object.rating:
+                elif db_show.get().rating != plex_object.rating:
                     return True
         else:
             return True
