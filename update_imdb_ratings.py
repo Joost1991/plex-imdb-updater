@@ -84,15 +84,15 @@ def main(plex_id=None, force=False):
             # check if movie or show library
             if plex_object.TYPE is "movie":
                 is_movie_library = True
-                if not should_update_media(plex_object.TYPE, plex_object):
+                if not force and not should_update_media(plex_object.TYPE, plex_object):
                     continue
             else:
                 is_movie_library = False
-                if not should_update_media(plex_object.TYPE, plex_object):
+                if not force and not should_update_media(plex_object.TYPE, plex_object):
                     continue
 
             # resolve plex object to right identifiers
-            imdb_id, tmdb_id, tvdb_id = resolve_ids(is_movie_library, plex_object.guid, pbar)
+            imdb_id, tmdb_id, tvdb_id = resolve_ids(is_movie_library, plex_object, pbar)
 
             # if no imdb_id is found for plex guid, reset all ratings
             if not imdb_id:
@@ -302,7 +302,7 @@ def update_imdb_episode_rating(database, episode, imdb_episodes, plex_object, se
     return False
 
 
-def resolve_ids(is_movie, guid, pbar=None):
+def resolve_ids(is_movie, plex_object, pbar=None):
     """
     Method to resolve ID from a Plex GUID
     :param is_movie_library: whether given GUID is a movie
@@ -312,13 +312,30 @@ def resolve_ids(is_movie, guid, pbar=None):
     """
     tmdb_id = None
     tvdb_id = None
-    if 'imdb://' in guid:
-        imdb_id = guid.split('imdb://')[1].split('?')[0]
-    elif 'themoviedb://' in guid:
-        tmdb_id = guid.split('themoviedb://')[1].split('?')[0]
+    # first try to resolve via Plex ID if fetched earlier
+    if plex_object.TYPE is "movie":
+        db_movie = Movie.select().where(Movie.plex_id == plex_object.ratingKey)
+        if db_movie.exists():
+            imdb_id = db_movie.get().imdb_id
+            tmdb_id = db_movie.get().tmdb_id
+            logger.debug("Resolved via existing db entry")
+            return imdb_id, tmdb_id, tvdb_id
+    else:
+        db_show = Show.select().where(Show.plex_id == plex_object.ratingKey)
+        if db_show.exists():
+            imdb_id = db_show.get().imdb_id
+            tmdb_id = db_show.get().tmdb_id
+            tvdb_id = db_show.get().tvdb_id
+            logger.debug("Resolved via existing db entry")
+            return imdb_id, tmdb_id, tvdb_id
+    # if not yet resolved it's a new item
+    if 'imdb://' in plex_object.guid:
+        imdb_id = plex_object.guid.split('imdb://')[1].split('?')[0]
+    elif 'themoviedb://' in plex_object.guid:
+        tmdb_id = plex_object.guid.split('themoviedb://')[1].split('?')[0]
         imdb_id = tmdb.get_imdb_id_from_tmdb(tmdb_id, is_movie, pbar)
-    elif 'thetvdb://' in guid:
-        tvdb_id = guid.split('thetvdb://')[1].split('?')[0]
+    elif 'thetvdb://' in plex_object.guid:
+        tvdb_id = plex_object.guid.split('thetvdb://')[1].split('?')[0]
         imdb_id = tmdb.get_imdb_id_from_tmdb_by_tvdb(tvdb_id, pbar)
     else:
         imdb_id = None
