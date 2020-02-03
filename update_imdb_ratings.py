@@ -11,17 +11,21 @@
 # ------------------------------------------------------------------------------
 
 # Requires: plexapi, imdbpie, omdb
+import csv
+import gzip
+import io
 import logging
 import sys
 import sqlite3
 from datetime import datetime, timedelta
 from time import sleep
 
+import requests
 from plexapi.server import PlexServer
 from imdbpie import Imdb
 from tqdm import tqdm
 
-from models import create_tables, Movie, Show, Episode
+from models import create_tables, Movie, Show, Episode, Season
 from utils import omdb, db, tmdb, config, imdb, util
 
 # EDIT SETTINGS ###
@@ -35,9 +39,24 @@ PLEX_DATABASE_FILE = "/var/lib/plexmediaserver/Library/Application Support/Plex 
 EPISODE_RATINGS = True  # Whether to fetch episode ratings
 EPISODE_RATINGS_SOURCE = "imdb"  # How to fetch the episode ratings. Via OMDB or directly from IMDB
 DRY_RUN = True  # Dry run without modifying the database (True or False)
-DEBUG_LEVEL = logging.INFO
+DEBUG_LEVEL = logging.DEBUG
 THRESHOLD_SHORT = timedelta(days=1)
 THRESHOLD_NORMAL = timedelta(days=14)
+
+
+def fetch_imdb_ratings():
+    """
+    Load newest IMDb ratings into memory
+    :return: a array of imdb ratings, key is IMDb ID, value is rating
+    """
+    response = requests.get("https://datasets.imdbws.com/title.ratings.tsv.gz")
+    file = io.BytesIO(response.content)
+    ratings = {}
+    with gzip.open(file, mode='rt') as tsv_file:
+        reader = csv.reader(tsv_file, delimiter="\t")
+        for line in reader:
+            ratings[line[0]] = line[1]
+    return ratings
 
 
 def main(plex_id=None, force=False):
@@ -70,7 +89,13 @@ def main(plex_id=None, force=False):
         database = None
 
     success = 0
+    created = 0
     failed = 0
+
+    # fetching ratings from IMDb dataset
+    logger.info("Fetching latest ratings from IMDb")
+    imdb_ratings = fetch_imdb_ratings()
+    logger.info("Done fetching latest ratings from IMDb")
 
     for library in libraries:
         pbar = tqdm(library.all(), postfix=["", ""])
@@ -84,12 +109,8 @@ def main(plex_id=None, force=False):
             # check if movie or show library
             if plex_object.TYPE is "movie":
                 is_movie_library = True
-                if not force and not should_update_media(plex_object.TYPE, plex_object):
-                    continue
             else:
                 is_movie_library = False
-                if not force and not should_update_media(plex_object.TYPE, plex_object):
-                    continue
 
             # resolve plex object to right identifiers
             imdb_id, tmdb_id, tvdb_id = resolve_ids(is_movie_library, plex_object, force, pbar)
@@ -103,40 +124,29 @@ def main(plex_id=None, force=False):
                 failed = failed + 1
                 continue
 
-            logger.debug("Getting ratings for imdb id '{imdb_id}'".format(imdb_id=imdb_id))
+            # Check if rating is in IMDb
             rating = None
-            imdb_object = None
-            # Check if we need to update this
-            if force or should_update_media(plex_object.TYPE, plex_object):
-                # first trying to get it from OMDB
-                if config.OMDB_API_KEY:
-                    imdb_object = omdb.get_imdb_rating_from_omdb(imdb_id, pbar)
-                    if imdb_object is not None:
-                        logger.debug("{im}\t{pm.title}\tOMDB".format(pm=plex_object, im=imdb_object["imdb_rating"]))
-                        rating = imdb_object["imdb_rating"]
+            if imdb_id in imdb_ratings:
+                rating = imdb_ratings[imdb_id]
 
-                # if no rating yet, try to get it directly from IMDB
-                if (imdb_object is None or rating is None) and imdb.title_exists(imdb_id):
-                    imdb_object = imdb.get_title_ratings(imdb_id)
-                    if imdb_object is not None and "rating" in imdb_object:
-                        logger.debug("{im}\t{pm.title}\tIMDB".format(pm=plex_object, im=imdb_object["rating"]))
-                        rating = imdb_object["rating"]
-
-                # reset in database if nothing could be fetched
-                if rating is None and not DRY_RUN:
-                    logger.warning("Media not found on IMDB. Skipping '{pm.title} ({imdb_id})'.".format(
-                        pm=plex_object, imdb_id=imdb_id))
-                    if not DRY_RUN:
-                        db.reset_rating(database, plex_object)
-                        db.set_locked_fields(database, plex_object)
-                    failed = failed + 1
-                    continue
-
+            # reset in database if nothing could be fetched
+            if rating is None and not DRY_RUN:
+                logger.warning("Media not found in fetched IMDB ratings. Skipping '{pm.title} ({imdb_id})'.".format(
+                    pm=plex_object, imdb_id=imdb_id))
+                if not DRY_RUN:
+                    db.reset_rating(database, plex_object)
+                    db.set_locked_fields(database, plex_object)
+                failed = failed + 1
+                continue
+            else:
+                logger.debug("Updating ratings for '{title}'".format(title=plex_object.title))
                 if is_movie_library:
                     # do update in local library for future reference
                     db_movie = Movie.select().where(Movie.plex_id == plex_object.ratingKey)
                     if db_movie.exists():
-                        db.update_db_rating(db_movie.get(), rating)
+                        db.update_db_rating(db_movie.get(), plex_object.title, rating, imdb_id,
+                                            plex_object.originallyAvailableAt)
+                        success = success + 1
                     else:
                         Movie.create(
                             title=plex_object.title,
@@ -146,11 +156,14 @@ def main(plex_id=None, force=False):
                             tmdb_id=tmdb_id,
                             release_date=plex_object.originallyAvailableAt
                         )
+                        created = created + 1
                 else:
                     # do update in local library for future reference
                     db_show = Show.select().where(Show.plex_id == plex_object.ratingKey)
                     if db_show.exists():
-                        db.update_db_rating(db_show.get(), rating)
+                        db.update_db_rating(db_show.get(), plex_object.title, rating, imdb_id,
+                                            plex_object.originallyAvailableAt, tmdb_id)
+                        success = success + 1
                     else:
                         Show.create(
                             title=plex_object.title,
@@ -160,6 +173,7 @@ def main(plex_id=None, force=False):
                             release_date=plex_object.originallyAvailableAt,
                             tvdb_id=tvdb_id
                         )
+                        created = created + 1
 
                 if not DRY_RUN:
                     # if not dry run, do a update in Plex' DB
@@ -173,12 +187,15 @@ def main(plex_id=None, force=False):
                         logger.debug("Skipping specials")
                         continue
                     # check if enabled in settings
-                    if EPISODE_RATINGS:
+                    db_season = Season.select().where(Season.plex_id == plex_object.ratingKey
+                                                      and Season.number == season.index)
+                    if EPISODE_RATINGS and util.check_media_needs_update(db_season, None, False):
                         logger.debug("Getting episodes for {p.title} for season {season}".format(
                             p=plex_object, season=season.index))
-                        imdb_episodes = None
+                        # First update all episodes from the season
+                        imdb_episodes = imdb.get_season_from_imdb(imdb_id, season.index)
                         for episode in season.episodes():
-                            update_success = update_episode_rating(database, episode, imdb_episodes, imdb_id,
+                            update_success = update_episode_rating(database, episode, imdb_ratings, imdb_episodes,
                                                                    plex_object, season)
                             if update_success:
                                 success = success + 1
@@ -191,99 +208,107 @@ def main(plex_id=None, force=False):
                 conn_db.commit()
     if not DRY_RUN:
         database.close()
-    logger.info("Finished updating. {success} updated and {failed} failed".format(success=success, failed=failed))
+    logger.info("Finished updating. {created} created, {success} updated and {failed} failed".format(created=created,
+                                                                                                     success=success,
+                                                                                                     failed=failed))
 
 
-def update_episode_rating(database, episode, imdb_episodes, imdb_id, plex_object, season):
+def update_episode_rating(database, episode, imdb_ratings, imdb_episodes, plex_object, season):
     """
     Update the episode rating if it is outdated
     :param database: connection to the Plex DB
     :param episode: the episode object from Plex
-    :param imdb_episodes: the IMDB episodes object containing the rating
-    :param imdb_id: the IMDB id from the parent show
+    :param imdb_ratings: all fetched IMDb ratings
+    :param imdb_episodes: the IMDB key/value ratings
     :param plex_object: the parent plex object
     :param season: the season from which this episode is beloning to
     :return: True if updated, False if not
     """
     db_episode = Episode.select().where(Episode.plex_id == episode.ratingKey)
     if not db_episode.exists():
-        if imdb_episodes is None:
-            imdb_episodes = imdb.get_season_from_imdb(imdb_id, season.index)
-        if update_imdb_episode_rating(database, episode,
-                                      imdb_episodes, plex_object, season):
-            logger.debug("Created episode '{e.title}' '{e.index}' "
-                          "with new ratings".format(e=episode))
+        if update_imdb_episode_rating(database, episode, imdb_ratings, imdb_episodes, plex_object, season):
+            logger.debug("Created episode '{e.title}' '{e.index}' with new ratings".format(e=episode))
             return True
         else:
             return False
     else:
-        # check if we need to update this item
-        need_update = False
-        if db_episode.get().rating is not episode.rating:
-            need_update = True
-        elif db_episode.get().last_update > datetime.now() - timedelta(days=-7):
-            need_update = True
-
-        if need_update:
-            if imdb_episodes is None:
-                imdb_episodes = imdb.get_season_from_imdb(imdb_id, season.index)
-            if update_imdb_episode_rating(database, episode,
-                                          imdb_episodes, plex_object,
-                                          season, db_episode):
-                logger.debug("Update episode '{e.title}' '{e.index}' "
-                             "with new ratings".format(e=episode))
-                return True
-            else:
-                return False
+        if update_imdb_episode_rating(database, episode, imdb_ratings, imdb_episodes, plex_object, season, db_episode):
+            logger.debug("Update episode '{e.title}' '{e.index}' with new ratings".format(e=episode))
+            return True
+        else:
+            return False
     return False
 
 
-def update_imdb_episode_rating(database, episode, imdb_episodes, plex_object, season, db_episode=None):
+def update_imdb_episode_rating(database, episode, imdb_ratings, imdb_episodes, plex_object, season, db_episode=None):
     """
     Update episode rating from IMDB
     :param database: connection to the database
     :param episode: the episode object from plex
-    :param imdb_episodes: the episode ratings from imdb
+    :param imdb_ratings: the ratings from imdb by imdb id
     :param plex_object: the plex object from the parent show
     :param season: the season of this episode
     :param exists: whether the media already exists in local db
     :return: true if update succeeds, false if not
     """
-    if episode.index in imdb_episodes:
-        if imdb_episodes[episode.index] == 'N/A':
-            if not DRY_RUN:
-                db.reset_rating(database, episode)
-                db.set_locked_fields(database, episode)
-            logger.debug("Episode '{e.title}' '{e.index}' has no rating available".format(
-                e=episode))
-            return False
+    if db_episode is not None:
+        if db_episode.get().imdb_id in imdb_ratings:
+            db.update_db_rating(db_episode.get(), episode.title, imdb_ratings[db_episode.get().imdb_id],
+                                db_episode.get().imdb_id, episode.originallyAvailableAt)
         else:
+            if episode.index not in imdb_episodes:
+                if not DRY_RUN:
+                    db.reset_rating(database, episode)
+                    db.set_locked_fields(database, episode)
+                logger.debug("Episode '{e.title}' '{e.index}' has no rating available".format(
+                    e=episode))
+                return False
+            else:
+                logger.debug("{title} is fetched from IMDb but not in IMDb dataset".format(title=episode.title))
+                db.update_db_rating(db_episode.get(), episode.title, imdb_episodes[episode.index]["rating"],
+                                    imdb_episodes[episode.index]["imdb_id"], episode.originallyAvailableAt)
+
+        if not DRY_RUN:
+            db.set_rating_and_imdb_image(database, episode,
+                                         imdb_ratings[db_episode.get().imdb_id])
+            db.set_locked_fields(database, episode)
+        return True
+    else:
+        # check if episode index is there and it's in the map with imdb ratings
+        if episode.index in imdb_episodes and imdb_episodes[episode.index]["imdb_id"] in imdb_ratings:
+            Episode.create(
+                parent_plex_id=plex_object.ratingKey,
+                plex_id=episode.ratingKey,
+                imdb_id=imdb_episodes[episode.index]["imdb_id"],
+                title=episode.title,
+                season=season.index,
+                episode=episode.index,
+                release_date=episode.originallyAvailableAt,
+                rating=imdb_ratings[imdb_episodes[episode.index]["imdb_id"]]
+            )
+            if not DRY_RUN:
+                db.set_rating_and_imdb_image(database, episode,
+                                             imdb_ratings[imdb_episodes[episode.index]["imdb_id"]])
+                db.set_locked_fields(database, episode)
+            return True
+        elif episode.index in imdb_episodes:
+            Episode.create(
+                parent_plex_id=plex_object.ratingKey,
+                plex_id=episode.ratingKey,
+                imdb_id=imdb_episodes[episode.index]["imdb_id"],
+                title=episode.title,
+                season=season.index,
+                episode=episode.index,
+                release_date=episode.originallyAvailableAt,
+                rating=imdb_episodes[episode.index]["rating"]
+            )
             if not DRY_RUN:
                 db.set_rating_and_imdb_image(database, episode,
                                              imdb_episodes[episode.index]["rating"])
                 db.set_locked_fields(database, episode)
-            # create episode in database
-            if db_episode is None:
-                Episode.create(
-                    parent_plex_id=plex_object.ratingKey,
-                    plex_id=episode.ratingKey,
-                    imdb_id=imdb_episodes[episode.index]["imdb_id"],
-                    title=episode.title,
-                    season=season.index,
-                    episode=episode.index,
-                    release_date=episode.originallyAvailableAt,
-                    rating=imdb_episodes[episode.index]["rating"]
-                )
-            else:
-                db.update_db_rating(db_episode.get(), imdb_episodes[episode.index]["rating"])
             return True
-    else:
-        if not DRY_RUN:
-            db.reset_rating(database, episode)
-            db.set_locked_fields(database, episode)
-        logger.debug("Episode '{e.title}' '{e.index}' not found. Cannot update".format(
-            e=episode))
-        if db_episode is None:
+        else:
+            # could not resolve. Create episode object without rating
             Episode.create(
                 parent_plex_id=plex_object.ratingKey,
                 plex_id=episode.ratingKey,
@@ -292,14 +317,10 @@ def update_imdb_episode_rating(database, episode, imdb_episodes, plex_object, se
                 episode=episode.index,
                 release_date=episode.originallyAvailableAt
             )
-        else:
-            if episode.index in imdb_episodes:
-                db.update_db_rating(db_episode.get(), imdb_episodes[episode.index]["rating"])
-            else:
-                logger.debug("Episode '{e.title}' '{e.index}' not found. Cannot update".format(
-                    e=episode))
-        return False
-    return False
+            if not DRY_RUN:
+                db.reset_rating(database, episode)
+                db.set_locked_fields(database, episode)
+            return False
 
 
 def resolve_ids(is_movie, plex_object, force, pbar=None):

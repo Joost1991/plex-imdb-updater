@@ -69,14 +69,21 @@ def set_locked_fields(db, plex_object):
                             [locked_fields, plex_object.ratingKey])
 
 
-def update_db_rating(db_media, rating):
+def update_db_rating(db_media, title, rating, imdb_id, release_date, tmdb_id=None, tvdb_id=None):
     """
     Update rating in the database including setting last update timestamp
     :param db_media: the BaseMediaModel
     :param rating: the rating to set for this
     :return:
     """
+    db_media.title = title
+    if tmdb_id:
+        db_media.tmdb_id = tmdb_id
+    if tvdb_id:
+        db_media.tvdb_id = tvdb_id
     db_media.rating = rating
+    db_media.imdb_id = imdb_id
+    db_media.release_date = release_date
     db_media.last_update = datetime.now()
     db_media.save()
 

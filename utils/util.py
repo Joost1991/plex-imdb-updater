@@ -28,6 +28,8 @@ def check_media_needs_update(db_media_object, plex_object, check_rating=True):
     :param check_rating: whether to check for rating. Default is True
     :return: True if update is required, False if not
     """
+    if not db_media_object.exists():
+        return True
     if is_short_treshold(db_media_object.get().release_date):
         if db_media_object.get().last_update < datetime.now() - THRESHOLD_SHORT:
             logger.debug("Update {title} because last update short threshold".format(title=db_media_object.get().title))

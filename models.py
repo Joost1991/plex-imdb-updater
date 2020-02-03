@@ -30,6 +30,10 @@ class Show(BaseModel):
     tvdb_id = IntegerField(null=True)
 
 
+class Season(BaseModel):
+    number = IntegerField()
+
+
 class Episode(BaseModel):
     parent_plex_id = IntegerField()
     episode = IntegerField()
@@ -43,4 +47,4 @@ class Movie(BaseModel):
 # simple utility function to create tables
 def create_tables():
     with database:
-        database.create_tables([Show, Movie, Episode])
+        database.create_tables([Show, Season, Movie, Episode])
