@@ -252,6 +252,11 @@ def update_imdb_episode_rating(database, episode, imdb_ratings, imdb_episodes, p
         if db_episode.get().imdb_id in imdb_ratings:
             db.update_db_rating(db_episode.get(), episode.title, imdb_ratings[db_episode.get().imdb_id],
                                 db_episode.get().imdb_id, episode.originallyAvailableAt)
+            if not DRY_RUN:
+                db.set_rating_and_imdb_image(database, episode,
+                                             imdb_ratings[db_episode.get().imdb_id])
+                db.set_locked_fields(database, episode)
+            return True
         else:
             if episode.index not in imdb_episodes:
                 if not DRY_RUN:
@@ -264,12 +269,11 @@ def update_imdb_episode_rating(database, episode, imdb_ratings, imdb_episodes, p
                 logger.debug("{title} is fetched from IMDb but not in IMDb dataset".format(title=episode.title))
                 db.update_db_rating(db_episode.get(), episode.title, imdb_episodes[episode.index]["rating"],
                                     imdb_episodes[episode.index]["imdb_id"], episode.originallyAvailableAt)
-
-        if not DRY_RUN:
-            db.set_rating_and_imdb_image(database, episode,
-                                         imdb_ratings[db_episode.get().imdb_id])
-            db.set_locked_fields(database, episode)
-        return True
+                if not DRY_RUN:
+                    db.set_rating_and_imdb_image(database, episode,
+                                                 imdb_episodes[episode.index]["rating"])
+                    db.set_locked_fields(database, episode)
+                return True
     else:
         # check if episode index is there and it's in the map with imdb ratings
         if episode.index in imdb_episodes and imdb_episodes[episode.index]["imdb_id"] in imdb_ratings:
