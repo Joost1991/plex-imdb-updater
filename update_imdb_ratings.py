@@ -202,9 +202,6 @@ def main(plex_id=None, force=False):
                             else:
                                 failed = failed + 1
             if not DRY_RUN:
-                while len(plex.sessions()) is not 0:
-                    logger.info("Plex Media Server in use... waiting 10 seconds before commiting changes")
-                    sleep(10)
                 conn_db.commit()
     if not DRY_RUN:
         database.close()
